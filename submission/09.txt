@@ -1,0 +1,18 @@
+    params = {
+        'objective': 'regression',
+        'boosting': 'gbdt',
+        'learning_rate': 0.01,
+        'num_leaves': 61,
+        'num_threads': 2,
+        'lambda_l1': 1,
+        'lambda_l2': 0.01,
+        'metric': 'mse',
+        'verbose': 1,
+        'feature_fraction': 1.0,
+        'feature_fraction_seed': 2018,
+        'bagging_fraction': 1.0,
+        'bagging_freq': 5,
+        'bagging_seed': 2018,
+    }
+
+no preprocessing
