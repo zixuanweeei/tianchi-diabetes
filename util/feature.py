@@ -30,6 +30,6 @@ def add_feature(data):
     # data['e抗原/核心抗体'] = data['乙肝e抗原']/data['乙肝核心抗体']
     data['eGFR'] = eGFR(data['肌酐'], data['年龄'], data['性别'])
     data['GFR'] = GFR(data['肌酐'], data['年龄'], data['性别'])
-    data.drop(['乙肝表面抗原', '乙肝表面抗体', '乙肝e抗原', '乙肝e抗体', '乙肝核心抗体'], inplace=True)
+    data.drop(columns=['乙肝表面抗原', '乙肝表面抗体', '乙肝e抗原', '乙肝e抗体', '乙肝核心抗体'], inplace=True)
 
     return data
