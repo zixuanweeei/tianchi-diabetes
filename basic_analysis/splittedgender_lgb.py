@@ -16,6 +16,8 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 sys.path.append('../')
 from util.feature import add_feature
+from util.metric import mean_square_error
+from util import variables
 
 train = pd.read_csv('../data/d_train_20180102.csv')
 train = add_feature(train)
@@ -44,36 +46,18 @@ for sets in [train_m, train_f]:
 
     train_set = lgb.Dataset(X_train, label=y_train)
     test_set = lgb.Dataset(X_test, label=y_test, reference=train_set)
-
-    params = {
-        'objective': 'regression',
-        'boosting': 'gbdt',
-        'learning_rate': 0.01,
-        'num_leaves': 15,
-        # 'max_depth': 5,
-        'num_threads': 2,
-        'lambda_l1': 0.01,
-        'lambda_l2': 0.01,
-        'metric': 'mse',
-        'verbose': 1,
-        'feature_fraction': 1.0,
-        'feature_fraction_seed': 2018,
-        'bagging_fraction': 1.0,
-        'bagging_freq': 5,
-        'bagging_seed': 2018,
-    }
-
     # gbm = lgb.train(params, train_set,
     #                 num_boost_round=5000,
     #                 valid_sets=[test_set, train_set],
     #                 valid_names=['test', 'train'],
     #                 early_stopping_rounds=100)
-    gbm = lgb.cv(params, train_set,
-                num_boost_round=500,
+    gbm = lgb.cv(variables.lgb_params, train_set,
+                num_boost_round=variables.num_boost_round,
                 nfold=5,
                 stratified=False,
-                early_stopping_rounds=100,
+                early_stopping_rounds=variables.early_stopping_rounds,
                 verbose_eval=10,
+                feval=mean_square_error,
                 seed=2018)
     
 #     log += ((gbm.best_score['test']['l2'], gbm.best_iteration), )

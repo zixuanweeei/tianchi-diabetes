@@ -16,6 +16,7 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 sys.path.append('../')
 from util.feature import add_feature
+from util import variables
 
 train = pd.read_csv('../data/d_train_20180102.csv')
 test = pd.read_csv('../data/d_test_A_20180102.csv')
@@ -49,31 +50,15 @@ for train_sets, test_sets in [(train_m, test_m), (train_f, test_f)]:
     print('Feature: ', train_sets.columns)
     train_set = lgb.Dataset(XALL, label=yALL)
 
-    params = {
-        'objective': 'regression',
-        'boosting': 'gbdt',
-        'learning_rate': 0.01,
-        'num_leaves': 15,
-        'num_threads': 2,
-        'lambda_l1': 1,
-        'lambda_l2': 0.01,
-        'metric': 'mse',
-        'verbose': 1,
-        'feature_fraction': 1.0,
-        'feature_fraction_seed': 2018,
-        'bagging_fraction': 1.0,
-        'bagging_freq': 5,
-        'bagging_seed': 2018,
-    }
-    gbm = lgb.train(params, train_set,
-                    num_boost_round=500,
+    gbm = lgb.train(variables.lgb_params, train_set,
+                    num_boost_round=1000,
                     valid_sets=train_set, valid_names='Self',
                     early_stopping_rounds=100)
 
     IDTest = test_sets.loc[:, ['id']]
     IDTest.reset_index(drop=True, inplace=True)
     glu = gbm.predict(test_sets[feature_columns], num_iteration=gbm.best_iteration)
-    glu = pd.DataFrame(glu, columns=['glu'])
+    glu = pd.DataFrame(glu.round(2), columns=['glu'])
     result.append(pd.concat([IDTest, glu], axis=1, ignore_index=True))
 
 result = pd.concat(result, ignore_index=True)
