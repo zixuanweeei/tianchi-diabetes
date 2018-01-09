@@ -17,9 +17,16 @@ lgb_params = {
     'bagging_fraction': 1.0,
     'bagging_freq': 5,
     'bagging_seed': 2018,
-    'min_data_in_leaf': 30,
-    'min_sum_hessian_in_leaf': 1.e-2,
+    'min_data_in_leaf': 100,
+    'min_sum_hessian_in_leaf': 1,
 }
 
-num_boost_round = 1000
-early_stopping_rounds=100
+num_boost_round = 3000
+early_stopping_rounds=300
+
+
+# ================= Bayesian Ridge Regression ==============
+BayesianRidgeParams = {'n_iter': 1000, 'tol': 1.e-5, 'alpha_1': 1e-06, 'alpha_2': 1e-06,
+                      'lambda_1': 1e-06, 'lambda_2': 1e-06, 'compute_score': False,
+                      'fit_intercept': True, 'normalize': True, 
+                      'copy_X': True, 'verbose': False}

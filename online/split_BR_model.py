@@ -1,9 +1,6 @@
 # coding: utf-8
-"""Simple lightGBM model
-
-1. Split train data into offline train set and test set
-2. Use all train data to train a new lightGBM model
-3. Predict the value of test data
+# coding: utf-8
+"""Simple Bayesian Ridge Regression model
 """
 
 import sys
@@ -11,11 +8,11 @@ from datetime import datetime as dt
 
 import numpy as np
 import pandas as pd
-import lightgbm as lgb
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn import linear_model
+from sklearn.preprocessing import MinMaxScaler
 
 sys.path.append('../')
-from util.feature import add_feature
+from util.feature import add_feature, fillna
 from util import variables
 
 train = pd.read_csv('../data/d_train_20180102.csv')
@@ -40,22 +37,18 @@ train_f = train.loc[train['性别'] == 1, :]
 test_m = test.loc[test['性别'] == 0, :]
 test_f = test.loc[test['性别'] == 1, :]
 
+regressor = linear_model.BayesianRidge(**variables.BayesianRidgeParams)
 result = []
 
 for train_sets, test_sets in [(train_m, test_m), (train_f, test_f)]:
     XALL = train_sets.loc[:, feature_columns]
-
     yALL = train_sets.loc[:, '血糖']
-    train_set = lgb.Dataset(XALL, label=yALL)
 
-    gbm = lgb.train(variables.lgb_params, train_set,
-                    num_boost_round=variables.num_boost_round,
-                    valid_sets=train_set, valid_names='Self',
-                    early_stopping_rounds=100)
+    regressor.fit(XALL, yALL)
 
     IDTest = test_sets.loc[:, ['id']]
     IDTest.reset_index(drop=True, inplace=True)
-    glu = gbm.predict(test_sets[feature_columns], num_iteration=gbm.best_iteration)
+    glu = regressor.predict(test_sets[feature_columns])
     glu = pd.DataFrame(glu.round(2), columns=['glu'])
     result.append(pd.concat([IDTest, glu], axis=1, ignore_index=True))
 
