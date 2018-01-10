@@ -30,3 +30,9 @@ BayesianRidgeParams = {'n_iter': 1000, 'tol': 1.e-5, 'alpha_1': 1e-06, 'alpha_2'
                       'lambda_1': 1e-06, 'lambda_2': 1e-06, 'compute_score': False,
                       'fit_intercept': True, 'normalize': True, 
                       'copy_X': True, 'verbose': False}
+
+# ==================== Ridge Regeression ===================
+RidgeParams = {'alpha': 1.0, 'fit_intercept': True, 
+              'normalize': False, 'copy_X': True, 
+              'max_iter': None, 'tol': 0.001, 
+              'solver': 'auto', 'random_state': None}

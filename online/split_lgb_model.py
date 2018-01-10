@@ -26,10 +26,10 @@ all_data = pd.concat([train, test], ignore_index=True)
 all_data = fillna(all_data)
 all_data = add_feature(all_data)
 
-feature_columns = [column for column in all_data.columns if column not in ['id', '性别', '体检日期', '血糖']]
+feature_col = [column for column in all_data.columns if column not in ['id', '性别', '体检日期', '血糖']]
 scaler = MinMaxScaler()
-scaler.fit(all_data.loc[:, feature_columns])
-all_data.loc[:, feature_columns] = scaler.transform(all_data[feature_columns])
+scaler.fit(all_data.loc[:, feature_col])
+all_data.loc[:, feature_col] = scaler.transform(all_data[feature_col])
 
 train = all_data.loc[all_data['血糖'] >= 0.0, :]
 test = all_data.loc[all_data['血糖'] < 0.0, :]
@@ -43,7 +43,7 @@ test_f = test.loc[test['性别'] == 1, :]
 result = []
 
 for train_sets, test_sets in [(train_m, test_m), (train_f, test_f)]:
-    XALL = train_sets.loc[:, feature_columns]
+    XALL = train_sets.loc[:, feature_col]
 
     yALL = train_sets.loc[:, '血糖']
     train_set = lgb.Dataset(XALL, label=yALL)
@@ -55,7 +55,7 @@ for train_sets, test_sets in [(train_m, test_m), (train_f, test_f)]:
 
     IDTest = test_sets.loc[:, ['id']]
     IDTest.reset_index(drop=True, inplace=True)
-    glu = gbm.predict(test_sets[feature_columns], num_iteration=gbm.best_iteration)
+    glu = gbm.predict(test_sets[feature_col], num_iteration=gbm.best_iteration)
     glu = pd.DataFrame(glu.round(2), columns=['glu'])
     result.append(pd.concat([IDTest, glu], axis=1, ignore_index=True))
 

@@ -1,5 +1,5 @@
 # coding: utf-8
-"""Simple Bayesian Ridge Regression model
+"""Simple Ridge Regression model
 
 1. Split train data into offline train set and test set
 2. Use them for cv
@@ -34,20 +34,18 @@ catagories = KMeans(n_clusters=4, random_state=2018).fit_predict(X_embedded)
 
 # scaler = MinMaxScaler()
 scaler = StandardScaler()
-regressor = linear_model.BayesianRidge(**variables.BayesianRidgeParams)
 
 print("Start CV-ing ...")
 for catagory in np.unique(catagories):
-    XALL = train.loc[catagories == catagory, feature_col]
-    
+    XALL = train.loc[catagories == catagory, feature_col]    
     XALL.fillna(XALL.median(), inplace=True)
     columns = XALL.columns
 
     scaler.fit(XALL)
     XALL = scaler.transform(XALL)
     XALL = pd.DataFrame(XALL, columns=columns)
-
     yALL = train.loc[catagories == catagory, '血糖']
 
+    regressor = linear_model.Ridge(**variables.RidgeParams)
     scores = cross_val_score(regressor, XALL, yALL, cv=5, scoring='neg_mean_squared_error')
     print("Accuracy: %0.2f (+/- %0.2f)" % ((scores/2).mean(), (scores/2).std() * 2))
