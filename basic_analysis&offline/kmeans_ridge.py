@@ -24,7 +24,7 @@ from util import variables
 train = pd.read_csv('../data/d_train_20180102.csv')
 train = fillna(train)
 train = add_feature(train)
-feature_col = [column for column in train.columns if column not in ['id', '体检日期', '血糖']]
+feature_col = [column for column in train.columns if column not in ['id', '体检日期', '血糖', '性别']]
 print(feature_col)
 # splits into different catagories
 print("Feature embedding ...")
@@ -49,3 +49,4 @@ for catagory in np.unique(catagories):
     regressor = linear_model.Ridge(**variables.RidgeParams)
     scores = cross_val_score(regressor, XALL, yALL, cv=5, scoring='neg_mean_squared_error')
     print("Accuracy: %0.2f (+/- %0.2f)" % ((scores/2).mean(), (scores/2).std() * 2))
+    

@@ -34,30 +34,22 @@ all_data.loc[:, feature_col] = scaler.transform(all_data[feature_col])
 train = all_data.loc[all_data['血糖'] >= 0.0, :]
 test = all_data.loc[all_data['血糖'] < 0.0, :]
 
-# splits into male and female
-train_m = train.loc[train['性别'] == 0, :]
-train_f = train.loc[train['性别'] == 1, :]
-test_m = test.loc[test['性别'] == 0, :]
-test_f = test.loc[test['性别'] == 1, :]
-
 result = []
 
-for train_sets, test_sets in [(train_m, test_m), (train_f, test_f)]:
-    XALL = train_sets.loc[:, feature_col]
+XALL = train.loc[:, feature_col]
+yALL = train.loc[:, '血糖']
+train_set = lgb.Dataset(XALL, label=yALL)
 
-    yALL = train_sets.loc[:, '血糖']
-    train_set = lgb.Dataset(XALL, label=yALL)
+gbm = lgb.train(variables.lgb_params, train_set,
+                num_boost_round=variables.num_boost_round,
+                valid_sets=train_set, valid_names='Self',
+                early_stopping_rounds=variables.early_stopping_rounds)
 
-    gbm = lgb.train(variables.lgb_params, train_set,
-                    num_boost_round=variables.num_boost_round,
-                    valid_sets=train_set, valid_names='Self',
-                    early_stopping_rounds=100)
-
-    IDTest = test_sets.loc[:, ['id']]
-    IDTest.reset_index(drop=True, inplace=True)
-    glu = gbm.predict(test_sets[feature_col], num_iteration=gbm.best_iteration)
-    glu = pd.DataFrame(glu.round(2), columns=['glu'])
-    result.append(pd.concat([IDTest, glu], axis=1, ignore_index=True))
+IDTest = test.loc[:, ['id']]
+IDTest.reset_index(drop=True, inplace=True)
+glu = gbm.predict(test[feature_col], num_iteration=gbm.best_iteration)
+glu = pd.DataFrame(glu.round(2), columns=['glu'])
+result.append(pd.concat([IDTest, glu], axis=1, ignore_index=True))
 
 result = pd.concat(result, ignore_index=True)
 result.sort_values(0, inplace=True)

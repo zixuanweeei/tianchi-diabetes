@@ -43,16 +43,6 @@ for sets in [train_m, train_f]:
     yALL = sets.loc[:, '血糖']
     train_set = lgb.Dataset(XALL, label=yALL)
 
-    # X_train, X_test, y_train, y_test = train_test_split(XALL, yALL,
-    #                                                     test_size=0.3, random_state=2018)
-
-    # train_set = lgb.Dataset(X_train, label=y_train)
-    # test_set = lgb.Dataset(X_test, label=y_test, reference=train_set)
-    # gbm = lgb.train(params, train_set,
-    #                 num_boost_round=5000,
-    #                 valid_sets=[test_set, train_set],
-    #                 valid_names=['test', 'train'],
-    #                 early_stopping_rounds=100)
     gbm = lgb.cv(variables.lgb_params, train_set,
                 num_boost_round=variables.num_boost_round,
                 nfold=5,
@@ -61,8 +51,3 @@ for sets in [train_m, train_f]:
                 verbose_eval=100,
                 feval=mean_square_error,
                 seed=2018)
-    
-#     log += ((gbm.best_score['test']['l2'], gbm.best_iteration), )
-    
-# for score, iteration in log:
-#     print('The best score {0} is at iteration {1}'.format(score, iteration))

@@ -18,8 +18,8 @@ def add_feature(data):
         data['性别'] = data['性别'].map({'男':0, '女':1})
     data['体检日期'] = pd.to_datetime(data['体检日期'], format='%d/%m/%Y')
     data['weekday'] = data['体检日期'].dt.dayofweek
-    data['month'] = data['体检日期'].dt.month
-    data['dayofyear'] = data['体检日期'].dt.dayofyear
+    # data['month'] = data['体检日期'].dt.month
+    # data['dayofyear'] = data['体检日期'].dt.dayofyear
     data['白蛋白/总蛋白'] = data['白蛋白']/data['*总蛋白']
     data['球蛋白/总蛋白'] = data['*球蛋白']/data['*总蛋白']
     data['甘油三酯/总胆固醇'] = data['甘油三酯']/data['总胆固醇']
@@ -39,7 +39,7 @@ def add_feature(data):
     return data
 
 def fillna(data):
-    data.drop(columns=['乙肝表面抗原', '乙肝表面抗体', '乙肝e抗原', '乙肝e抗体', '乙肝核心抗体'], inplace=True)
+    data = data.drop(columns=['乙肝表面抗原', '乙肝表面抗体', '乙肝e抗原', '乙肝e抗体', '乙肝核心抗体'])
     if is_object_dtype(data['性别']):
         data['性别'] = data['性别'].map({'男':0, '女':1})   
     feature_col = [column for column in data.columns if column not in ['id', '体检日期', '血糖']]
@@ -68,6 +68,7 @@ def fillna(data):
         'bagging_seed': 2018,
         'tree_learner': 'feature',
         'verbose': -1,
+        'metric': 'mse',
     }
 
     for target in columns_na:
@@ -76,8 +77,11 @@ def fillna(data):
         train_set = lgb.Dataset(X, label=y)
         
         gbm = lgb.train(params, train_set,
-                       num_boost_round=100,
-                       categorical_feature=['性别'])
+                       num_boost_round=1000,
+                       categorical_feature=['性别'],
+                       valid_sets=train_set, valid_names='train',
+                       early_stopping_rounds=300,
+                       verbose_eval=False)
         XTest = incomplete_sample.loc[incomplete_sample[target].isna(), feature_col].values
         na_sample_idxer = incomplete_sample[target].isna()
         result_to_fill = gbm.predict(XTest, num_iteration=gbm.best_iteration)
