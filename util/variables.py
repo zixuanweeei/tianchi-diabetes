@@ -5,24 +5,25 @@ lgb_params = {
     'objective': 'regression',
     'boosting': 'gbdt',
     'learning_rate': 0.01,
-    'num_leaves': 128,
+    'num_leaves': 63,
     # 'max_depth': 5,
-    'num_threads': 2,
+    'num_threads': 20,
     'lambda_l1': 0.01,
     'lambda_l2': 0.01,
     'metric': 'mse',
     'verbose': 1,
-    'feature_fraction': .8,
+    'feature_fraction': .9,
     'feature_fraction_seed': 2,
     'bagging_fraction': 0.7,
     'bagging_freq': 5,
     'bagging_seed': 3,
-    'min_data_in_leaf': 10,
-    'min_sum_hessian_in_leaf': 1.e-2,
+    'min_data_in_leaf': 100,
+    'min_sum_hessian_in_leaf': 1,
+    'max_bin': 800,
 }
 
-num_boost_round = 10000
-early_stopping_rounds=300
+num_boost_round = 3000
+early_stopping_rounds = 100
 
 
 # ================= Bayesian Ridge Regression ==============
@@ -36,3 +37,9 @@ RidgeParams = {'alpha': 1.0, 'fit_intercept': True,
               'normalize': False, 'copy_X': True, 
               'max_iter': None, 'tol': 0.001, 
               'solver': 'auto', 'random_state': None}
+
+# ====================== Elastic Net =======================
+ElasticNetParams = {'alpha': 1.0, 'l1_ratio': 0.1, 'fit_intercept': True,
+            'normalize': False, 'precompute': False, 'max_iter': 1000,
+            'copy_X': True, 'tol': 0.0001, 'warm_start': False,
+            'positive': False, 'random_state': None, 'selection': 'cyclic'}

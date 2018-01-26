@@ -1,10 +1,12 @@
 # coding: utf-8
 
+from itertools import combinations
+
 import pandas as pd
 from pandas.api.types import is_object_dtype
 import numpy as np
-
 import lightgbm as lgb
+from sklearn.preprocessing import PolynomialFeatures
 
 
 def GFR(scr, age, gender):
@@ -16,6 +18,17 @@ def eGFR(serum, age, gender):
 def add_feature(data):
     if is_object_dtype(data['性别']):
         data['性别'] = data['性别'].map({'男':0, '女':1})
+
+    columns_to_poly = [column for column in data.columns if column not in ['性别', 'id', '体检日期', '血糖']]
+    poly = PolynomialFeatures(2, interaction_only=True, include_bias=False)
+    poly_feature = poly.fit_transform(data[columns_to_poly])
+    poly_columns = ['%s*%s' % (s1, s2) for s1, s2 in combinations(columns_to_poly, 2)]
+    poly_feature = poly_feature[:, len(columns_to_poly):]
+    poly_feature = pd.DataFrame(poly_feature, columns=poly_columns)
+
+    log_feature = np.log1p(data[columns_to_poly])
+    log_feature.columns=['log_%s' % c for c in columns_to_poly]
+
     data['体检日期'] = pd.to_datetime(data['体检日期'], format='%d/%m/%Y')
     data['weekday'] = data['体检日期'].dt.dayofweek
     # data['month'] = data['体检日期'].dt.month
@@ -35,6 +48,8 @@ def add_feature(data):
     # data['e抗原/核心抗体'] = data['乙肝e抗原']/data['乙肝核心抗体']
     data['eGFR'] = eGFR(data['肌酐'], data['年龄'], data['性别'])
     data['GFR'] = GFR(data['肌酐'], data['年龄'], data['性别'])
+
+    data = pd.concat([data, poly_feature, log_feature], axis=1)
 
     return data
 
@@ -58,7 +73,7 @@ def fillna(data):
         'boosting': 'rf',
         'learning_rate': 0.01,
         'num_leaves': 15,
-        'num_threads': 2,
+        'num_threads': 20,
         'min_data_in_leaf': 50,
         'min_sum_hessian_in_leaf': 1e-2,
         'feature_fraction': 0.7,
@@ -96,11 +111,14 @@ def fillna(data):
 
 if __name__ == "__main__":
     train = pd.read_csv('../data/d_train_20180102.csv')
-    test = pd.read_csv('../data/d_test_A_20180102.csv')
-    test['血糖'] = -1
+    # test = pd.read_csv('../data/d_test_A_20180102.csv')
+    # test['血糖'] = -1
 
-    all_data = pd.concat([train, test], ignore_index=True)
-    filled_data = fillna(all_data)
-    filled_data.to_csv('../data/filled.csv', index=False)
+    # all_data = pd.concat([train, test], ignore_index=True)
+    # filled_data = fillna(all_data)
+    train.drop(columns=['乙肝表面抗原', '乙肝表面抗体', '乙肝e抗原', '乙肝e抗体', '乙肝核心抗体'], inplace=True)
+    train.fillna(train.median(), inplace=True)
+    train = add_feature(train)
+    train.to_csv('../data/filled.csv', index=False)
 
-    print(filled_data.columns[filled_data.isna().sum() > 0])
+    print(train.shape)
