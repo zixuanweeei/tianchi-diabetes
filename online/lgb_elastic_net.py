@@ -50,12 +50,12 @@ for cv_idx, (train_idx, valid_idx) in enumerate(kf.split(XALL)):
                             num_iteration=gbm.best_iteration,
                             pred_leaf=True)
     regr = ElasticNet(**variables.ElasticNetParams)
-    regr.fit(tree_feature_train, np.log1p(yALL.iloc[train_idx]))  
+    regr.fit(tree_feature_train, yALL.iloc[train_idx])  
     
     test_feature = gbm.predict(test[predictor],
                               pred_leaf=True,
                               num_iteration=gbm.best_iteration)
-    test_preds[:, cv_idx] = np.expm1(regr.predict(test_feature))
+    test_preds[:, cv_idx] = regr.predict(test_feature)
 
 preds = test_preds.mean(axis=1)
 submission = pd.DataFrame({'preds': preds})

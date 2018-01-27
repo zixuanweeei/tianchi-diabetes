@@ -1,6 +1,7 @@
 # coding: utf-8
 
 from itertools import combinations
+import multiprocessing
 
 import pandas as pd
 from pandas.api.types import is_object_dtype
@@ -49,9 +50,69 @@ def add_feature(data):
     data['eGFR'] = eGFR(data['肌酐'], data['年龄'], data['性别'])
     data['GFR'] = GFR(data['肌酐'], data['年龄'], data['性别'])
 
+    data['*天门冬氨酸氨基转换酶strong'] = data['*天门冬氨酸氨基转换酶'].map(lambda x: 1 if (x >= 15) and (x < 40) else 0)
+    data['*丙氨酸氨基转换酶strongcolor'] = data['*丙氨酸氨基转换酶'] .map(lambda x: 1 if (x >= 0) and (x < 35) else 0)
+    data['*丙氨酸氨基转换酶strongsucce'] = data['*丙氨酸氨基转换酶'] .map(lambda x: 1 if (x >= 4) and (x < 26) else 0)
+    data['*碱性磷酸酶strong'] = 0
+    data.loc[data['性别'] == 0, '*碱性磷酸酶strong'] = data.loc[data['性别'] == 0, '*碱性磷酸酶'].map(lambda x: 1 if (x > 45) and (x < 125) else 0)
+    data.loc[data['性别'] == 1, '*碱性磷酸酶strong'] = data.loc[data['性别'] == 1, '*碱性磷酸酶'].map(lambda x: 1 if (x > 50) and (x < 135) else 0)
+    data['*r-谷氨酰基转换酶strong'] = data['*r-谷氨酰基转换酶'].map(lambda x: 1 if x < 50 else 0)
+    data['*总蛋白strong'] = data['*总蛋白'].map(lambda x: 1 if (x > 60) and (x < 85) else 0)
+    data['白蛋白strong'] = data['白蛋白'].map(lambda x: 1 if (x > 35) and (x < 51) else 0)
+    data['*球蛋白strong'] = data['*球蛋白'].map(lambda x: 1 if (x > 20) and (x < 30) else 0)
+    data['甘油三酯strong'] = data['甘油三酯'].map(lambda x: 1 if (x > 0.45) and (x < 1.69) else 0)
+    data['甘油三酯verystrong'] = data['甘油三酯'].map(lambda x: 1 if (x > 1.70) and (x < 2.25) else 0)
+    data['甘油三酯dead'] = data['甘油三酯'].map(lambda x: 1 if x >= 2.26 else 0)
+    data['总胆固醇strong'] = data['总胆固醇'].map(lambda x: 1 if (x > 2.85) and (x < 5.69) else 0)
+    data['高密度脂蛋白胆固醇strong'] = 0
+    data.loc[data['性别'] == 0, '高密度脂蛋白胆固醇strong'] = data.loc[data['性别'] == 0, '高密度脂蛋白胆固醇'].map(lambda x: 1 if x > 1.2 else 0)
+    data.loc[data['性别'] == 1, '高密度脂蛋白胆固醇strong'] = data.loc[data['性别'] == 1, '高密度脂蛋白胆固醇'].map(lambda x: 1 if x > 1.4 else 0)
+    data['低密度脂蛋白胆固醇strong'] = data['低密度脂蛋白胆固醇'].map(lambda x: 1 if x > 4.14 else 0)
+    data['尿素strong'] = data['尿素'].map(lambda x: 1 if (x > 1.5) and (x < 4.4) else 0)
+    data['肌酐strong'] = 0
+    data.loc[data['性别'] == 0, '肌酐strong'] = data.loc[data['性别'] == 0, '肌酐'].map(lambda x: 1 if (x > 44) and (x < 133) else 0)
+    data.loc[data['性别'] == 1, '肌酐strong'] = data.loc[data['性别'] == 1, '肌酐'].map(lambda x: 1 if (x > 70) and (x < 105) else 0)
+    data['白细胞计数strong'] = 0
+    data.loc[data['年龄'] <= 14, '白细胞计数strong'] = data.loc[data['年龄'] <= 14, '白细胞计数'].map(lambda x: 1 if (x > 5.) and (x < 12.) else 0)
+    data.loc[data['年龄'] > 14, '白细胞计数strong'] = data.loc[data['年龄'] > 14, '白细胞计数'].map(lambda x: 1 if (x > 3.5) and (x < 9.5) else 0)
+    data['红细胞计数strong'] = 0
+    data.loc[data['年龄'] < 6, '红细胞计数strong'] = data.loc[data['年龄'] < 6, '红细胞计数strong'].map(lambda x: 1 if (x > 6.) and (x < 7.) else 0)
+    data.loc[(data['年龄'] <= 14)&(data['年龄'] >= 6), '红细胞计数strong'] = data.loc[(data['年龄'] <= 14)&(data['年龄'] >= 6), '红细胞计数strong'].map(lambda x: 1 if (x > 4.2) and (x < 5.2) else 0)
+    data.loc[(data['年龄'] > 14)&(data['性别'] == 0), '红细胞计数strong'] = data.loc[(data['年龄'] > 14)&(data['性别'] == 0), '红细胞计数strong'].map(lambda x: 1 if (x > 4.5) and (x < 5.5) else 0)
+    data.loc[(data['年龄'] > 14)&(data['性别'] == 1), '红细胞计数strong'] = data.loc[(data['年龄'] > 14)&(data['性别'] == 1), '红细胞计数strong'].map(lambda x: 1 if (x > 4.) and (x < 5.) else 0)
+    data['血红蛋白strong'] = 0
+    data.loc[data['年龄'] < 6, '血红蛋白strong'] = data.loc[data['年龄'] < 6, '血红蛋白strong'].map(lambda x: 1 if (x > 160.) and (x < 220.) else 0)
+    data.loc[(data['年龄'] <= 14)&(data['年龄'] >= 6), '血红蛋白strong'] = data.loc[(data['年龄'] <= 14)&(data['年龄'] >= 6), '血红蛋白strong'].map(lambda x: 1 if (x > 110) and (x < 160) else 0)
+    data.loc[(data['年龄'] > 14)&(data['性别'] == 0), '血红蛋白strong'] = data.loc[(data['年龄'] > 14)&(data['性别'] == 0), '血红蛋白strong'].map(lambda x: 1 if (x > 130) and (x < 175) else 0)
+    data.loc[(data['年龄'] > 14)&(data['性别'] == 1), '血红蛋白strong'] = data.loc[(data['年龄'] > 14)&(data['性别'] == 1), '血红蛋白strong'].map(lambda x: 1 if (x > 115) and (x < 150) else 0)
+    data['红细胞压积strong'] = 0
+    data.loc[data['性别'] == 0, '红细胞压积strong'] = data.loc[data['性别'] == 0, '红细胞压积'].map(lambda x: 1 if (x > .4) and (x < .5) else 0)
+    data.loc[data['性别'] == 1, '红细胞压积strong'] = data.loc[data['性别'] == 1, '红细胞压积'].map(lambda x: 1 if (x > .35) and (x < .45) else 0)
+    data['红细胞平均体积strong'] = 0
+    data.loc[data['性别'] == 0, '红细胞平均体积strong'] = data.loc[data['性别'] == 0, '红细胞平均体积'].map(lambda x: 1 if (x > 83) and (x < 93) else 0)
+    data.loc[data['性别'] == 1, '红细胞平均体积strong'] = data.loc[data['性别'] == 1, '红细胞平均体积'].map(lambda x: 1 if (x > 82) and (x < 92) else 0)
+    data['红细胞平均血红蛋白量strong'] = data['红细胞平均血红蛋白量'].map(lambda x: 1 if (x > 26) and (x < 38) else 0)
+    data['红细胞体积分布宽度strong'] = data['红细胞体积分布宽度'].map(lambda x: 1 if x < 14.5 else 0)
+    data['血小板计数strong'] = data['血小板计数'].map(lambda x: 1 if (x > 100) and (x < 350) else 0)
+    data['血小板平均体积strong'] = data['血小板平均体积'].map(lambda x: 1 if (x > 6.) and (x < 11.5) else 0)
+    data['血小板体积分布宽度strong'] = data['血小板体积分布宽度'].map(lambda x: 1 if (x > 15) and (x < 20) else 0)
+    data['血小板比积strong'] = data['血小板比积'].map(lambda x: 1 if (x > 0.11) and (x < 0.23) else 0)
+    data['中性粒细胞%strong'] = data['中性粒细胞%'].map(lambda x: 1 if (x > 55) and (x < 70) else 0)
+    data['淋巴细胞%strong'] = data['淋巴细胞%'].map(lambda x: 1 if (x > 20) and (x < 40) else 0)
+    data['单核细胞%strong'] = data['单核细胞%'].map(lambda x: 1 if (x > 3) and (x < 8) else 0)
+    data['嗜酸细胞%strong'] = data['嗜酸细胞%'].map(lambda x: 1 if x < 8 else 0)
+    data['嗜碱细胞%strong'] = data['嗜碱细胞%'].map(lambda x: 1 if x < 1 else 0)
+
     data = pd.concat([data, poly_feature, log_feature], axis=1)
 
-    return data
+    # =============================== Clean feature according to its importance rank =====================
+    feature_importance = pd.read_csv('../feature_importance/feature_importance_tree.csv', index_col=0)
+    feature_importance = feature_importance.mean(axis=1)
+    feature_importance.sort_values(axis=0, ascending=False, inplace=True)
+    feature_reserved = feature_importance.head(50).index.tolist()
+    feature_reserved.append('血糖')
+
+    return data[feature_reserved]
 
 def fillna(data):
     data = data.drop(columns=['乙肝表面抗原', '乙肝表面抗体', '乙肝e抗原', '乙肝e抗体', '乙肝核心抗体'])
@@ -59,11 +120,11 @@ def fillna(data):
         data['性别'] = data['性别'].map({'男':0, '女':1})   
     feature_col = [column for column in data.columns if column not in ['id', '体检日期', '血糖']]
     
-    feature_min = data[feature_col].min()
-    feature_max = data[feature_col].max()
-    scaled_feature = (data[feature_col] - feature_min) / (feature_max - feature_min)
+    # feature_min = data[feature_col].min()
+    # feature_max = data[feature_col].max()
+    # scaled_feature = (data[feature_col] - feature_min) / (feature_max - feature_min)
 
-    data.loc[:, feature_col] = scaled_feature.values
+    # data.loc[:, feature_col] = scaled_feature.values
     columns_na = data.columns[data.isna().sum() > 0]
     complete_sample = data.loc[data.isna().sum(axis=1) == 0, :]
     incomplete_sample = data.loc[data.isna().sum(axis=1) > 0, :]
@@ -73,7 +134,7 @@ def fillna(data):
         'boosting': 'rf',
         'learning_rate': 0.01,
         'num_leaves': 15,
-        'num_threads': 20,
+        'num_threads':  multiprocessing.cpu_count() // 2,
         'min_data_in_leaf': 50,
         'min_sum_hessian_in_leaf': 1e-2,
         'feature_fraction': 0.7,
@@ -103,8 +164,8 @@ def fillna(data):
         incomplete_sample.loc[na_sample_idxer, target] = result_to_fill
     
     data = pd.concat([complete_sample, incomplete_sample])
-    inverse_values = data[feature_col]*(feature_max - feature_min) + feature_min
-    data.loc[:, feature_col] = inverse_values
+    # inverse_values = data[feature_col]*(feature_max - feature_min) + feature_min
+    # data.loc[:, feature_col] = inverse_values
 
     return data
 

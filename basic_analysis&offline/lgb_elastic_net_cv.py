@@ -1,11 +1,4 @@
 # coding: utf-8
-"""Simple lightGBM model
-
-1. Split train data into offline train set and test set
-2. Use all train data to train a new lightGBM model
-3. Predict the value of test data
-"""
-
 import sys
 
 import numpy as np
@@ -14,7 +7,7 @@ import lightgbm as lgb
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
-from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import ElasticNet, HuberRegressor
 
 sys.path.append('../')
 from util.feature import add_feature, fillna
@@ -58,7 +51,7 @@ for cv_idx, (train_idx, valid_idx) in enumerate(kf.split(XALL)):
     tree_feature_valid = gbm.predict(XALL.iloc[valid_idx],
                             num_iteration=gbm.best_iteration,
                             pred_leaf=True)
-    regr = ElasticNet(**variables.ElasticNetParams)
+    regr = HuberRegressor(**variables.HuberParams)
     regr.fit(tree_feature_train, np.log1p(yALL.iloc[train_idx]))  
     preds[valid_idx] = np.expm1(regr.predict(tree_feature_valid))
     feature_importance.append(pd.DataFrame(gbm.feature_importance(),

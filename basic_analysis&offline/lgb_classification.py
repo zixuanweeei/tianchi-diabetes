@@ -20,7 +20,7 @@ train = fillna(train)
 train = add_feature(train)
 
 XALL = train.loc[:, [column for column in train.columns if column not in ['id', '体检日期', '血糖']]]
-yALL = (train.loc[:, '血糖'] > 7).astype(int)
+yALL = (train.loc[:, '血糖'] > 11).astype(int)
 predictor = XALL.columns
 print('Feature: ', XALL.columns.tolist())
 
@@ -65,15 +65,10 @@ for cv_idx, (train_idx, valid_idx) in enumerate(kf.split(XALL)):
     feature_importance.append(pd.DataFrame(gbm.feature_importance(),
                                           index=predictor, columns=['CV{0}'.format(cv_idx)]))
 
-preds_ = (preds > 0.5).astype(int)
+preds_ = (preds > 0.3).astype(int)
 print('Offline auc: {0}'.format(roc_auc_score(yALL, preds_)))
 print('Offline accuracy: {0}'.format(accuracy_score(yALL, preds_)))
 print('Offline f1: {0}'.format(f1_score(yALL, preds_)))
 feature_importance = pd.concat(feature_importance, axis=1)
 feature_importance.sort_values(by='CV0', ascending=True, inplace=True)
 feature_importance.to_csv('../feature_importance/feature_importance_ctree.csv')
-# fig_imp, ax_imp = plt.subplots(figsize=(6, 9*XALL.shape[1]//40))
-# feature_importance.plot.barh(ax=ax_imp)
-# fig_imp.tight_layout()
-# fig_imp.savefig('../feature_importance/feature_importance_ctree.png', dpi=200)
-# fig_imp.show()

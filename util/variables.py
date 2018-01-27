@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import multiprocessing
 # ================= LightGBM parameters ====================
 lgb_params = {
     'objective': 'regression',
@@ -7,7 +8,7 @@ lgb_params = {
     'learning_rate': 0.01,
     'num_leaves': 63,
     # 'max_depth': 5,
-    'num_threads': 20,
+    'num_threads': multiprocessing.cpu_count() // 2,
     'lambda_l1': 0.01,
     'lambda_l2': 0.01,
     'metric': 'mse',
@@ -43,3 +44,11 @@ ElasticNetParams = {'alpha': 1.0, 'l1_ratio': 0.1, 'fit_intercept': True,
             'normalize': False, 'precompute': False, 'max_iter': 1000,
             'copy_X': True, 'tol': 0.0001, 'warm_start': False,
             'positive': False, 'random_state': None, 'selection': 'cyclic'}
+
+SVRParams = {'kernel': 'sigmoid', 'degree': 3, 'gamma': 'auto',
+            'coef0': 0.0, 'tol': 0.001, 'C': 1.0,
+            'epsilon': 0.1, 'shrinking': True, 'cache_size': 200, 
+            'verbose': True, 'max_iter': -1}
+
+HuberParams = {'epsilon': 1.35,'max_iter': 1000, 'alpha': 0.0001,
+              'warm_start': False, 'fit_intercept': True, 'tol': 1e-05}
