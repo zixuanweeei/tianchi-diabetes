@@ -12,14 +12,13 @@ from datetime import datetime as dt
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 sys.path.append('../')
 from util.feature import add_feature, fillna
 from util import variables
 
 train = pd.read_csv('../data/d_train_20180102.csv')
-test = pd.read_csv('../data/d_test_A_20180102.csv')
+test = pd.read_csv('../data/d_test_B_20180102.csv')
 test['血糖'] = -1
 
 all_data = pd.concat([train, test], ignore_index=True)
@@ -27,9 +26,6 @@ all_data = fillna(all_data)
 all_data = add_feature(all_data)
 
 feature_col = [column for column in all_data.columns if column not in ['id', '性别', '体检日期', '血糖']]
-scaler = MinMaxScaler()
-scaler.fit(all_data.loc[:, feature_col])
-all_data.loc[:, feature_col] = scaler.transform(all_data[feature_col])
 
 train = all_data.loc[all_data['血糖'] >= 0.0, :]
 test = all_data.loc[all_data['血糖'] < 0.0, :]

@@ -15,14 +15,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 sys.path.append('../')
-from util.feature import add_feature, fillna
+from util.feature import add_feature, fillna, nn_feature
 from util.metric import mean_square_error
 from util import variables
 
 train = pd.read_csv('../data/d_train_20180102.csv')
 train = fillna(train)
 train = add_feature(train)
-
+nn_f = nn_feature(train)
+train = pd.concat([train, nn_f], axis=1)
 
 XALL = train.loc[:, [column for column in train.columns if column not in ['id', '体检日期', '血糖']]]
 yALL = train.loc[:, '血糖']

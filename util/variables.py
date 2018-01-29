@@ -13,13 +13,13 @@ lgb_params = {
     'lambda_l2': 0.01,
     'metric': 'mse',
     'verbose': 1,
-    'feature_fraction': .9,
+    'feature_fraction': .7,
     'feature_fraction_seed': 2,
     'bagging_fraction': 0.7,
     'bagging_freq': 5,
     'bagging_seed': 3,
     'min_data_in_leaf': 100,
-    'min_sum_hessian_in_leaf': 1,
+    'min_sum_hessian_in_leaf': 11,
     'max_bin': 800,
 }
 
@@ -52,3 +52,7 @@ SVRParams = {'kernel': 'sigmoid', 'degree': 3, 'gamma': 'auto',
 
 HuberParams = {'epsilon': 1.35,'max_iter': 1000, 'alpha': 0.0001,
               'warm_start': False, 'fit_intercept': True, 'tol': 1e-05}
+
+CatParams = {'iterations': 3000, 'learning_rate': 0.01, 'depth': 5,
+            'l2_leaf_reg': 0.01, 'eval_metric': 'RMSE', 'random_seed': 2018,
+            'thread_count': multiprocessing.cpu_count() // 2,}

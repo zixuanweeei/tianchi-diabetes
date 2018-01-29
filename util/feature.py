@@ -8,13 +8,101 @@ from pandas.api.types import is_object_dtype
 import numpy as np
 import lightgbm as lgb
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler
 
+from keras.models import Sequential, Model
+from keras.layers import Dense
+from keras.layers import Dropout, BatchNormalization
+from keras.layers.advanced_activations import PReLU
+from keras.layers.noise import GaussianDropout
+from keras.optimizers import Adam
+from keras.wrappers.scikit_learn import KerasRegressor
 
 def GFR(scr, age, gender):
     return 175*scr**-1.154*age**-0.203*(1 - 0.268*gender)
 
 def eGFR(serum, age, gender):
     return np.exp(1.911 + 5.249/serum - 2.114/serum**2 - 0.00686*age - 0.205*gender)
+
+def _loc(f, hist, bins):
+    cpr = (f >= bins).astype(int)
+    if np.all(cpr):
+        return hist[-1]
+    else:
+        d = np.diff(cpr).astype(bool)
+        return hist[d][0]
+
+def density(df, features):
+    densities = pd.DataFrame()
+    for idx, feature in enumerate(features):
+        hist, bins = np.histogram(df[feature], density=True, bins=15)
+        loc = lambda x: _loc(x, hist, bins)
+        print(feature)
+        densities[feature + 'density'] = df[feature].map(lambda x: loc(x))
+    
+    return densities
+
+def nn_feature(train, test=None):
+    if is_object_dtype(train['性别']):
+        train['性别'] = train['性别'].map({'男':0, '女':1})
+    
+    predictor = [column for column in train.columns if column not in ['id', '体检日期', '血糖']]
+
+    if test is None:
+        XALL = train.loc[:, predictor]
+        yALL = train.loc[:, '血糖']
+        sc = StandardScaler()
+        XALL = sc.fit_transform(XALL)
+        XALL = pd.DataFrame(XALL, columns=predictor)
+    else:
+        if is_object_dtype(test['性别']):
+            test['性别'] = test['性别'].map({'男':0, '女':1})
+        test['血糖'] = -1
+        train = pd.concat([train, test])
+        sc = StandardScaler()
+        scaled_data = sc.fit_transform(train[predictor])
+        train[predictor] = scaled_data
+
+        test = train.loc[train['血糖'] < 0.0, predictor]
+        XALL = train.loc[train['血糖'] >= 0.0, predictor]
+        yALL = train.loc[train['血糖'] >= 0.0, '血糖']
+
+    # Neural Network
+    nn = Sequential()
+    nn.add(Dense(units = 400 , kernel_initializer='normal', input_dim=XALL.shape[1]))
+    nn.add(PReLU())
+    nn.add(Dropout(.4))
+    nn.add(Dense(units = 160 , kernel_initializer='normal'))
+    nn.add(PReLU())
+    nn.add(BatchNormalization())
+    nn.add(Dropout(.6))
+    nn.add(Dense(units = 64 , kernel_initializer='normal'))
+    nn.add(PReLU())
+    nn.add(BatchNormalization())
+    nn.add(Dropout(.5))
+    nn.add(Dense(units = 26, kernel_initializer='normal'))
+    nn.add(PReLU())
+    nn.add(BatchNormalization(name='nn_feature'))
+    nn.add(Dropout(.6))
+    nn.add(Dense(1, kernel_initializer='normal'))
+    nn.compile(loss='mae', optimizer=Adam(lr=4e-3, decay=1e-4))
+
+    nn_feature = Model(inputs=nn.input,
+                    outputs=nn.get_layer('nn_feature').output)
+
+    nn.fit(XALL, yALL, batch_size = 32, epochs = 70, verbose=1)
+    if test is None:
+        nn_f = np.zeros((XALL.shape[0], 26))
+        nn_f += nn_feature.predict(XALL)
+    else:
+        nn_f = np.zeros((test.shape[0], 26))
+        nn_f += nn_feature.predict(test)
+        
+    # nn_f /= 5
+    nn_f = pd.DataFrame(nn_f, columns=['nn_%d' % idx for idx in range(26)])
+
+    return nn_f
 
 def add_feature(data):
     if is_object_dtype(data['性别']):
@@ -103,13 +191,15 @@ def add_feature(data):
     data['嗜酸细胞%strong'] = data['嗜酸细胞%'].map(lambda x: 1 if x < 8 else 0)
     data['嗜碱细胞%strong'] = data['嗜碱细胞%'].map(lambda x: 1 if x < 1 else 0)
 
-    data = pd.concat([data, poly_feature, log_feature], axis=1)
+    density_feature = density(data, columns_to_poly)
+
+    data = pd.concat([data, poly_feature, log_feature, density_feature], axis=1)
 
     # =============================== Clean feature according to its importance rank =====================
     feature_importance = pd.read_csv('../feature_importance/feature_importance_tree.csv', index_col=0)
     feature_importance = feature_importance.mean(axis=1)
     feature_importance.sort_values(axis=0, ascending=False, inplace=True)
-    feature_reserved = feature_importance.head(50).index.tolist()
+    feature_reserved = feature_importance.head(100).index.tolist()
     feature_reserved.append('血糖')
 
     return data[feature_reserved]
@@ -146,22 +236,27 @@ def fillna(data):
         'verbose': -1,
         'metric': 'mse',
     }
-
+    kf = KFold(n_splits=5, shuffle=True, random_state=2018)
     for target in columns_na:
         X = complete_sample.loc[:, [column for column in feature_col if column is not target]]
         y = complete_sample.loc[:, target]
-        train_set = lgb.Dataset(X, label=y)
-        
-        gbm = lgb.train(params, train_set,
-                       num_boost_round=1000,
-                       categorical_feature=['性别'],
-                       valid_sets=train_set, valid_names='train',
-                       early_stopping_rounds=300,
-                       verbose_eval=False)
-        XTest = incomplete_sample.loc[incomplete_sample[target].isna(), feature_col].values
         na_sample_idxer = incomplete_sample[target].isna()
-        result_to_fill = gbm.predict(XTest, num_iteration=gbm.best_iteration)
-        incomplete_sample.loc[na_sample_idxer, target] = result_to_fill
+        XTest = incomplete_sample.loc[na_sample_idxer, feature_col].values
+        
+        result_to_fill = np.zeros((XTest.shape[0], 5))
+        for cv_idx, (train_idx, valid_idx) in enumerate(kf.split(X)):
+            train_set = lgb.Dataset(X.iloc[train_idx], label=y.iloc[train_idx])
+            valid_set = lgb.Dataset(X.iloc[valid_idx], label=y.iloc[valid_idx])
+            
+            gbm = lgb.train(params, train_set,
+                        num_boost_round=3000,
+                        categorical_feature=['性别'],
+                        valid_sets=valid_set, valid_names='valid',
+                        early_stopping_rounds=100,
+                        verbose_eval=False)
+            
+            result_to_fill[:, cv_idx] = gbm.predict(XTest, num_iteration=gbm.best_iteration)
+        incomplete_sample.loc[na_sample_idxer, target] = result_to_fill.mean(axis=1)
     
     data = pd.concat([complete_sample, incomplete_sample])
     # inverse_values = data[feature_col]*(feature_max - feature_min) + feature_min
@@ -172,6 +267,7 @@ def fillna(data):
 
 if __name__ == "__main__":
     train = pd.read_csv('../data/d_train_20180102.csv')
+    test = pd.read_csv('../data/d_test_A_20180102.csv')
     # test = pd.read_csv('../data/d_test_A_20180102.csv')
     # test['血糖'] = -1
 
@@ -179,7 +275,7 @@ if __name__ == "__main__":
     # filled_data = fillna(all_data)
     train.drop(columns=['乙肝表面抗原', '乙肝表面抗体', '乙肝e抗原', '乙肝e抗体', '乙肝核心抗体'], inplace=True)
     train.fillna(train.median(), inplace=True)
-    train = add_feature(train)
-    train.to_csv('../data/filled.csv', index=False)
+    test.fillna(test.median(), inplace=True)
+    nn_f = nn_feature(train, test)
 
-    print(train.shape)
+    print(nn_f.shape)

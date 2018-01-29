@@ -3,14 +3,14 @@ import sys
 
 import numpy as np
 import pandas as pd
-import lightgbm as lgb
+from catboost import CatBoostRegressor, Pool
 import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
 
 sys.path.append('../')
-from util.feature import add_feature, fillna, nn_feature
-from util.metric import mse
+from util.feature import add_feature, fillna
+# from util.metric import mse
 from util import variables
 
 plt.rcParams['font.sans-serif']=['SimHei'] #用来正常显示中文标签
@@ -23,35 +23,30 @@ test_answer.columns = ['血糖']
 test = pd.concat([test_feature, test_answer], axis=1)
 train = pd.concat([train, test], ignore_index=True)
 train = fillna(train)
-nn_f = nn_feature(train)
 train = add_feature(train)
-train = pd.concat([train, nn_f], axis=1)
 
 XALL = train.loc[:, [column for column in train.columns if column not in ['id', '体检日期', '血糖']]]
 yALL = train.loc[:, '血糖']
 predictor = XALL.columns
 print('Feature: ', XALL.columns.tolist())
+# scaler = MinMaxScaler()
+# XALL = scaler.fit_transform(XALL)
+# XALL = pd.DataFrame(XALL, columns=predictor)
 
 kf = KFold(n_splits=5, shuffle=True, random_state=2018)
 preds = np.zeros(XALL.shape[0])
 feature_importance = []
 for cv_idx, (train_idx, valid_idx) in enumerate(kf.split(XALL)):
     print('CV epoch[{0:2d}]:'.format(cv_idx))
-    train_dat = lgb.Dataset(XALL.iloc[train_idx], yALL.iloc[train_idx])
-    valid_dat = lgb.Dataset(XALL.iloc[valid_idx], yALL.iloc[valid_idx])
+    eval_set = Pool(XALL.iloc[valid_idx], yALL.iloc[valid_idx])
 
-    gbm = lgb.train(variables.lgb_params,
-                   train_dat,
-                   num_boost_round=variables.num_boost_round,
-                   valid_sets=valid_dat,
-                   verbose_eval=100,
-                   early_stopping_rounds=variables.early_stopping_rounds,
-                   feval=mse)
+    model = CatBoostRegressor(**variables.CatParams)
+    model.fit(XALL.iloc[train_idx], yALL.iloc[train_idx],
+             eval_set=eval_set, verbose=False)
     
-    preds[valid_idx] = gbm.predict(XALL.iloc[valid_idx],
-                                  num_iteration=gbm.best_iteration)
-    feature_importance.append(pd.DataFrame(gbm.feature_importance(),
-                                          index=predictor, columns=['CV{0}'.format(cv_idx)]))
+    preds[valid_idx] = model.predict(XALL.iloc[valid_idx])
+    # feature_importance.append(pd.DataFrame(gbm.feature_importance(),
+    #                                       index=predictor, columns=['CV{0}'.format(cv_idx)]))
 
 print('Offline mse: {0}'.format(mean_squared_error(yALL, preds)*0.5))
 # feature_importance = pd.concat(feature_importance, axis=1)
