@@ -1,6 +1,7 @@
 *.tsv
 
-/data
+/data/*.csv
+/data/*.xlsx
 /ref
 /basic_analysis&offline/.ipynb_checkpoints
 /util/__pycache__
